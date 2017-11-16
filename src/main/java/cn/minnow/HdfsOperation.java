@@ -1,4 +1,4 @@
-package kvstore;
+package cn.minnow;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,6 +8,7 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -15,23 +16,29 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import cn.helium.kvstore.common.KvStoreConfig;
+
 public class HdfsOperation {
 	private Configuration conf = new Configuration();
-	private static final String HDFS_PATH = "hdfs://localhost:9000";
+	private static final String HDFS_PATH = KvStoreConfig.getHdfsUrl();
 	private static final int ONE_NODE = 66060288;
 	
 	HdfsOperation(){
-		System.out.println("new a hdfs operation!");
+		conf = new Configuration();
+		conf.setBoolean("dfs.support.append", true);
+		conf.set("dfs.client.block.write.replace-datanode-on-failure.policy","NEVER");
+		conf.set("dfs.client.block.write.replace-datanode-on-failure.enable","true");
+			
 	}
 	
 	public boolean createFile(String filePath) {
 		boolean create = false;
 		try {
-			FileSystem fs = FileSystem.get(conf);
-			Path dst = new Path(HDFS_PATH + filePath); 
+			FileSystem fs = FileSystem.get(new URI(HDFS_PATH),conf);
+			Path dst = new Path(filePath); 
 			
 			create = fs.createNewFile(dst);
-		} catch (IOException e) {
+		} catch (IOException | URISyntaxException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -42,11 +49,15 @@ public class HdfsOperation {
 	public boolean isExists(String filePath) {
 		boolean exists = false;
 		try {
-			FileSystem fs = FileSystem.get(conf);
+			FileSystem fs = FileSystem.get(new URI("HDFS_PATH"),conf);
 			Path dst = new Path(HDFS_PATH + filePath); 
+			System.out.println("isExists: "+ filePath);
 			
 			exists = fs.exists(dst);
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (URISyntaxException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -72,15 +83,41 @@ public class HdfsOperation {
 		return sz;
 	}
 	
+	
+	
+	public boolean mkdir(String dir) {
+		if(StringUtils.isBlank(dir)) {
+			System.out.println("the dir should not be empty!");
+			return false;
+		}
+		Configuration conf = new Configuration();  
+        try {
+			FileSystem fs = FileSystem.get(URI.create(dir), conf);
+			if (!fs.exists(new Path(dir))) {  
+	            fs.mkdirs(new Path(dir));  
+	        }  
+			fs.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		return true;
+	}
+	
+	
+	
 	public String whichFile(int kvpodId) {
 		//加入进程ID防止写冲突
 		String dst = HDFS_PATH + "/node" + kvpodId;
+		mkdir(dst);
 		String fileName = "";
 		
 		try {
 			FileSystem fs = FileSystem.get(URI.create(dst), conf);  
 			FileStatus fileList[] = fs.listStatus(new Path(dst));
 			int size = fileList.length;  
+			
+			System.out.println("Sizesziesize: " + size);
 	        for (int i = 0; i < size; i++) {  
 //	            System.out.println("name:" + fileList[i].getPath().getName()  
 //	                    + "\t\tsize:" + fileList[i].getLen()); 
@@ -89,10 +126,18 @@ public class HdfsOperation {
 	            	break;
 	            }
 	        } 
+	       
 	        if(fileName == null || fileName == "") {
-	        	String lastName = fileList[size-1].getPath().getName();
-	        	int idx = Integer.parseInt(lastName.substring(4)) + 1;
-	        	fileName = "data" + idx;
+	  
+	        	if(size != 0) {
+	        		
+		        	String lastName = fileList[size-1].getPath().getName();
+		        	int idx = Integer.parseInt(lastName.substring(4)) + 1;
+		        	fileName = "data" + idx;
+	        	}else {
+	        		
+	        		fileName = "data" + 0;
+	        	}
 	        	createFile("/node" + kvpodId + "/" + fileName);
 	        }
 		} catch (IOException e) {
@@ -105,7 +150,9 @@ public class HdfsOperation {
 	
 	//hdfs上的索引备份，同样根据进程ID区分
 	public String whichIndexFile(int kvpodId, String key) {
-		String indexFile =  HDFS_PATH + "/index" + kvpodId;
+		String indexFile =    "/index" + kvpodId;
+		mkdir(HDFS_PATH+ indexFile);
+		System.out.println("mkdir success!");
 		switch(Math.abs(key.hashCode()%3)) {
 			case 0:
 				indexFile = indexFile + "/index0";
@@ -117,6 +164,7 @@ public class HdfsOperation {
 				indexFile = indexFile + "/index2";
 			break;	
 		}
+		System.out.println("indexfile: "+ indexFile);
 		if(!isExists(indexFile))
 			createFile(indexFile);
 		return indexFile;
@@ -126,12 +174,19 @@ public class HdfsOperation {
 		try {
 			FileSystem fs = FileSystem.get(URI.create(HDFS_PATH + fileName), conf);
 			FSDataOutputStream out = fs.append(new Path(HDFS_PATH + fileName)); 
-			int readLen = line.getBytes().length;  
-	        while (-1 != readLen) {  
-	            out.write(line.getBytes(), 0, readLen);  
-	        }  
+//			int readLen = line.getBytes().length;  
+//	        while (-1 != readLen) {  
+//	            out.write(line.getBytes(), 0, readLen);  
+//	            readLen--;
+//	            System.out.println("line  byte length: "+ readLen + "\n");
+//	        }  
+			out.write(line.getBytes());  
+			System.out.println("appending...");
+			out.flush();
 	        out.close();  
 	        fs.close(); 
+	        
+	        System.out.println("append success!");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

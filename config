@@ -1,1 +1,1 @@
-processorClass=cn.minnow.kvstore.KvProcessor
+processorClass=cn.minnow.KvProcessor

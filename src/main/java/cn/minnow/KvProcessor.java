@@ -1,4 +1,4 @@
-package kvstore;
+package cn.minnow;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -27,23 +27,20 @@ import cn.helium.kvstore.rpc.*;
 
 public class KvProcessor implements Processor {
 	
-	KvProcessor(){
-		System.out.println("new a processor!");
-	}
+//	KvProcessor(){
+//		System.out.println("new a processor!");
+//	}
 
 	private Configuration conf = new Configuration();
-	private static final String HDFS_PATH = "hdfs://localhost:9000";
+	private static final String HDFS_PATH = KvStoreConfig.getHdfsUrl();
+	private static final String LOCAL_PATH = "/opt/localdisk";
+//	private static final String HDFS_PATH = "hdfs://localhost:9000";
+//	private static final String LOCAL_PATH = "d:/cloudindex";
 	private static final int ONE_NODE = 66060288;
+	String tmp = "";
 	
 	HdfsOperation hdfs = new HdfsOperation();
 	LocalOperation local = new LocalOperation();
-
-	public static void main(String args[]) {
-		
-
-		System.out.println("success!");
-	}
-	
 
 
 	@Override
@@ -54,6 +51,7 @@ public class KvProcessor implements Processor {
 		int num = KvStoreConfig.getServersNum();
 		
 		String filePath = hdfs.whichFile(kvpodId);
+		System.out.println("batch putting... path: " + filePath );
 		
 		Map<String,Map<String,String>> map = new HashMap<String,Map<String,String>>();
 		String lines = "";
@@ -79,7 +77,8 @@ public class KvProcessor implements Processor {
 			}
 			
 			String index = key + "," + filePath + "\n";
-			local.writeToLocal("D:/cloudindex"+indexFile,index);
+			local.writeToLocal(LOCAL_PATH+indexFile,index);
+			System.out.println("batch putting... indexing: " + indexFile );
 			
 			//索引备份
 			for(int i = 0; i < num; i++) {
@@ -112,6 +111,7 @@ public class KvProcessor implements Processor {
 	@Override
 	public Map<String, String> get(String key) {
 		// TODO Auto-generated method stub
+		System.out.println("geting... Key: " + key );
 		
 		String indexFile = "";
 		switch(Math.abs(key.hashCode()%3)) {
@@ -125,13 +125,14 @@ public class KvProcessor implements Processor {
 			indexFile = "/index2";
 			break;	
 		}
-		String filePath = local.readIndex("D:/cloudindex" + indexFile,key);
+		String filePath = local.readIndex(LOCAL_PATH + indexFile,key);
 		int kvpodId = 0;
 		while(filePath == null || filePath == "") {
 			filePath = hdfs.readHdfsIndex(HDFS_PATH+"/index"+kvpodId+indexFile,key);
 			kvpodId++;
 		}
 		
+		System.out.println("geting... indexpath: " + filePath );
 		Map<String,String> value = hdfs.readHdfs(HDFS_PATH + filePath,key);
 		
 		return value;
@@ -147,8 +148,11 @@ public class KvProcessor implements Processor {
 	public byte[] process(byte[] input) {
 		// TODO Auto-generated method stub
 		
+		int kvpodId = RpcServer.getRpcServerId();
 		String index = new String(input);
+		System.out.println("index:" + index);
 		String key = index.split(",")[0];
+		System.out.println("key:" + key);
 		String indexFile = "";
 		switch(Math.abs(key.hashCode()%3)) {
 			case 0:
@@ -162,16 +166,20 @@ public class KvProcessor implements Processor {
 				break;	
 		}
 		
-		local.writeToLocal("D:/cloudindex"+indexFile,index);
+		System.out.println("id:" + kvpodId + "create index file: "+ LOCAL_PATH+indexFile);
+		local.writeToLocal(LOCAL_PATH+indexFile,index);
 		
-		return null;
+		return "fucked!".getBytes();
 	}
 
 	@Override
 	public boolean put(String key, Map<String, String> value) {
 		// TODO Auto-generated method stub
+		System.out.println("Key: " + key + "Value： " + value);
 		int kvpodId = RpcServer.getRpcServerId();
 		int num = KvStoreConfig.getServersNum();
+		
+		System.out.println("kvpodId:" + kvpodId + " \n num: " + num);
 		
 		String filePath = hdfs.whichFile(kvpodId);
 		String indexFile = "";
@@ -188,7 +196,9 @@ public class KvProcessor implements Processor {
 		}
 		
 		String index = key + "," + filePath + "\n";
-		local.writeToLocal("D:/cloudindex"+indexFile,index);
+		
+		System.out.println("index:" + index);
+		local.writeToLocal(LOCAL_PATH+indexFile,index);
 		
 		//索引备份
 		for(int i = 0; i < num; i++) {
@@ -197,6 +207,7 @@ public class KvProcessor implements Processor {
 			try {
 				RpcClientFactory.inform(i ,index.getBytes());
 			} catch (IOException e) {
+				System.out.println("inform exception from:"+ kvpodId +"to: "+i);
 				String indexOnHDFS = hdfs.whichIndexFile(kvpodId,key);
 				hdfs.append(indexOnHDFS, index);
 				// TODO Auto-generated catch block
@@ -207,9 +218,13 @@ public class KvProcessor implements Processor {
 		Map<String,Map<String, String> > hey = new HashMap<String,Map<String, String>>();
 		hey.put(key, value);
 		String line = hey + "\n";
+		
+		System.out.println("hey:" + line);
 		hdfs.append(filePath, line);
 		
 		return true;
 	}
 
+	
+	
 }

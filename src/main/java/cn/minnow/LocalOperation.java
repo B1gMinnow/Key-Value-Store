@@ -1,4 +1,4 @@
-package kvstore;
+package cn.minnow;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -8,10 +8,12 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 
+import cn.helium.kvstore.common.KvStoreConfig;
+
 public class LocalOperation {
 	
 	private Configuration conf = new Configuration();
-	private static final String HDFS_PATH = "hdfs://localhost:9000";
+	private static final String HDFS_PATH = KvStoreConfig.getHdfsUrl();
 	private static final int ONE_NODE = 66060288;
 	
 	LocalOperation(){
