@@ -14,6 +14,7 @@ public class LocalOperation {
 	
 	private Configuration conf = new Configuration();
 	private static final String HDFS_PATH = KvStoreConfig.getHdfsUrl();
+//	private static final String HDFS_PATH = "hdfs://localhost:9000";
 	private static final int ONE_NODE = 66060288;
 	
 	LocalOperation(){

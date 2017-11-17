@@ -16,11 +16,14 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import com.google.gson.Gson;
+
 import cn.helium.kvstore.common.KvStoreConfig;
 
 public class HdfsOperation {
 	private Configuration conf = new Configuration();
 	private static final String HDFS_PATH = KvStoreConfig.getHdfsUrl();
+//	private static final String HDFS_PATH = "hdfs://localhost:9000";
 	private static final int ONE_NODE = 66060288;
 	
 	HdfsOperation(){
@@ -106,45 +109,70 @@ public class HdfsOperation {
 	
 	
 	
-	public String whichFile(int kvpodId) {
-		//加入进程ID防止写冲突
-		String dst = HDFS_PATH + "/node" + kvpodId;
-		mkdir(dst);
-		String fileName = "";
+	public String whichFile() {
+//		//加入进程ID防止写冲突
+//		String dst = HDFS_PATH + "/node" + kvpodId;
+//		mkdir(dst);
+//		String fileName = "";
+//		
+//		try {
+//			FileSystem fs = FileSystem.get(URI.create(dst), conf);  
+//			FileStatus fileList[] = fs.listStatus(new Path(dst));
+//			int size = fileList.length;  
+//			
+//			System.out.println("Sizesziesize: " + size);
+//	        for (int i = 0; i < size; i++) {  
+////	            System.out.println("name:" + fileList[i].getPath().getName()  
+////	                    + "\t\tsize:" + fileList[i].getLen()); 
+//	            if(fileList[i].getLen() < ONE_NODE) {
+//	            	fileName = fileList[i].getPath().getName();
+//	            	break;
+//	            }
+//	        } 
+//	       
+//	        if(fileName == null || fileName == "") {
+//	  
+//	        	if(size != 0) {
+//	        		
+//		        	String lastName = fileList[size-1].getPath().getName();
+//		        	int idx = Integer.parseInt(lastName.substring(4)) + 1;
+//		        	fileName = "data" + idx;
+//	        	}else {
+//	        		
+//	        		fileName = "data" + 0;
+//	        	}
+//	        	createFile("/node" + kvpodId + "/" + fileName);
+//	        }
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		String filePath = "/node" + kvpodId + "/" + fileName;
 		
+		String dst = HDFS_PATH + "/data";
+		mkdir(dst);
+		int idx = 0;
+		FileSystem fs;
 		try {
-			FileSystem fs = FileSystem.get(URI.create(dst), conf);  
+			fs = FileSystem.get(URI.create(dst), conf);
 			FileStatus fileList[] = fs.listStatus(new Path(dst));
-			int size = fileList.length;  
+			int size = fileList.length; 
+			System.out.println("Sizesziesize: " + size); 
 			
-			System.out.println("Sizesziesize: " + size);
-	        for (int i = 0; i < size; i++) {  
-//	            System.out.println("name:" + fileList[i].getPath().getName()  
-//	                    + "\t\tsize:" + fileList[i].getLen()); 
-	            if(fileList[i].getLen() < ONE_NODE) {
-	            	fileName = fileList[i].getPath().getName();
-	            	break;
-	            }
-	        } 
-	       
-	        if(fileName == null || fileName == "") {
-	  
-	        	if(size != 0) {
-	        		
-		        	String lastName = fileList[size-1].getPath().getName();
-		        	int idx = Integer.parseInt(lastName.substring(4)) + 1;
-		        	fileName = "data" + idx;
-	        	}else {
-	        		
-	        		fileName = "data" + 0;
-	        	}
-	        	createFile("/node" + kvpodId + "/" + fileName);
-	        }
+			if(size != 0) {
+				
+	    		String lastName = fileList[size-1].getPath().getName();
+	        	idx = Integer.parseInt(lastName.substring(4)) + 1;
+	        	
+	    	}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-		String filePath = "/node" + kvpodId + "/" + fileName;
+		}  
+	
+		String filePath = "/data/data"+ idx;
+		createFile(filePath);
+		System.out.println("create path in which file: " + filePath); 
 		return filePath;
 	}
 	
@@ -235,17 +263,24 @@ public class HdfsOperation {
 			fsr = fs.open(new Path(filePath));
 			bufferedReader = new BufferedReader(new InputStreamReader(fsr));
 			
-			while ((line = bufferedReader.readLine()) != null)
-			{
-				String[] arr = line.split("\\{");
-				if(key.equals(arr[1].split("=")[0])){
-					String[] valueStr = (arr[2].split("\\}")[0]).split(",");
-					for(int i = 0; i < valueStr.length; i++) {
-						value.put(valueStr[i].split("=")[0], valueStr[i].split("=")[1]);
-					}
-				} 
-				
-			}
+			String jsonStr = bufferedReader.readLine();
+			
+			Gson gson = new Gson();
+			Map<String, Map<String,String>> map = gson.fromJson(jsonStr, HashMap.class);
+			
+			value = map.get(key);
+			
+//			while ((line = bufferedReader.readLine()) != null)
+//			{
+//				String[] arr = line.split("\\{");
+//				if(key.equals(arr[1].split("=")[0])){
+//					String[] valueStr = (arr[2].split("\\}")[0]).split(",");
+//					for(int i = 0; i < valueStr.length; i++) {
+//						value.put(valueStr[i].split("=")[0], valueStr[i].split("=")[1]);
+//					}
+//				} 
+//				
+//			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
