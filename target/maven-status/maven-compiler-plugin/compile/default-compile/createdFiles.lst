@@ -1,5 +1,3 @@
 cn\minnow\LocalOperation.class
 cn\minnow\HdfsOperation.class
 cn\minnow\KvProcessor.class
-cn\minnow\KvProcessor$putToHdfs.class
-cn\minnow\KvProcessor$1.class
