@@ -52,7 +52,7 @@ public class HdfsOperation {
 	public boolean isExists(String filePath) {
 		boolean exists = false;
 		try {
-			FileSystem fs = FileSystem.get(new URI("HDFS_PATH"),conf);
+			FileSystem fs = FileSystem.get(new URI(HDFS_PATH),conf);
 			Path dst = new Path(HDFS_PATH + filePath); 
 			System.out.println("isExists: "+ filePath);
 			
@@ -162,8 +162,11 @@ public class HdfsOperation {
 			if(size != 0) {
 				
 	    		String lastName = fileList[size-1].getPath().getName();
-	        	idx = Integer.parseInt(lastName.substring(4)) + 1;
+	        	idx = size ;
 	        	
+	        	System.out.println("lastname: " + lastName); 
+	        	
+	        	System.out.println("idx: " + idx); 
 	    	}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -171,7 +174,8 @@ public class HdfsOperation {
 		}  
 	
 		String filePath = "/data/data"+ idx;
-		createFile(filePath);
+		if(!isExists(filePath))
+			createFile(filePath);
 		System.out.println("create path in which file: " + filePath); 
 		return filePath;
 	}
@@ -252,7 +256,6 @@ public class HdfsOperation {
 	
 	public Map<String,String> readHdfs(String filePath,String key) {
 		
-		StringBuffer buffer = new StringBuffer();
 		FSDataInputStream fsr = null;
 		BufferedReader bufferedReader = null;
 		String line = null;
@@ -263,15 +266,12 @@ public class HdfsOperation {
 			fsr = fs.open(new Path(filePath));
 			bufferedReader = new BufferedReader(new InputStreamReader(fsr));
 			
-			String jsonStr = bufferedReader.readLine();
-			
-			Gson gson = new Gson();
-			Map<String, Map<String,String>> map = gson.fromJson(jsonStr, HashMap.class);
-			
-			value = map.get(key);
-			
-//			while ((line = bufferedReader.readLine()) != null)
-//			{
+			String jsonStr = "";
+
+			while ((line = bufferedReader.readLine()) != null)
+			{
+				
+				jsonStr += line;
 //				String[] arr = line.split("\\{");
 //				if(key.equals(arr[1].split("=")[0])){
 //					String[] valueStr = (arr[2].split("\\}")[0]).split(",");
@@ -279,8 +279,14 @@ public class HdfsOperation {
 //						value.put(valueStr[i].split("=")[0], valueStr[i].split("=")[1]);
 //					}
 //				} 
-//				
-//			}
+				
+			}
+			
+			System.out.println("jsonStr:" + jsonStr);
+			Gson gson = new Gson();
+			Map<String, Map<String,String>> map = gson.fromJson(jsonStr, HashMap.class);
+			
+			value = map.get(key);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
