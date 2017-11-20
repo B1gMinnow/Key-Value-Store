@@ -38,6 +38,8 @@ public class KvProcessor implements Processor {
 //	private static final String HDFS_PATH = "hdfs://localhost:9000";
 //	private static final String LOCAL_PATH = "d:/cloudindex";
 	private static final int ONE_NODE = 66060288;
+	
+	private boolean flag;
 	Map<String, Map<String,String>> mem = null; 
 	Gson gson = new Gson();
 	
@@ -47,7 +49,8 @@ public class KvProcessor implements Processor {
 	public KvProcessor(){
 		System.out.println("new a processor!");
 		mem = new ConcurrentHashMap();
-		new Thread(new putToHdfs()).start();
+		flag = true;
+		
 	}
 
 	@Override
@@ -189,6 +192,12 @@ public class KvProcessor implements Processor {
 	public boolean put(String key, Map<String, String> value) {
 		// TODO Auto-generated method stub
 		System.out.println("Key: " + key + "Value£º " + value);
+		
+		if(flag) {
+			System.out.println("new a thread!!!! \n" + flag);
+			new Thread(new putToHdfs()).start();
+		}
+		flag = false;
 //		int kvpodId = RpcServer.getRpcServerId();
 //		int num = KvStoreConfig.getServersNum();
 //		
@@ -283,10 +292,11 @@ public class KvProcessor implements Processor {
 				}
 			}
 			
-			
-			String memStr = gson.toJson(mem);
-			
-			hdfs.append(filePath, memStr);
+			synchronized(mem) {
+				String memStr = gson.toJson(mem);
+				hdfs.append(filePath, memStr);
+			}
+
 		}
 		
 	}
