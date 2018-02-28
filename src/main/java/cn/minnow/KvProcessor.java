@@ -49,8 +49,7 @@ public class KvProcessor implements Processor {
 	public KvProcessor(){
 		System.out.println("new a processor!");
 		mem = new ConcurrentHashMap();
-		flag = true;
-		
+		flag = true;	
 	}
 
 	@Override

@@ -110,45 +110,7 @@ public class HdfsOperation {
 	
 	
 	public String whichFile() {
-//		//加入进程ID防止写冲突
-//		String dst = HDFS_PATH + "/node" + kvpodId;
-//		mkdir(dst);
-//		String fileName = "";
-//		
-//		try {
-//			FileSystem fs = FileSystem.get(URI.create(dst), conf);  
-//			FileStatus fileList[] = fs.listStatus(new Path(dst));
-//			int size = fileList.length;  
-//			
-//			System.out.println("Sizesziesize: " + size);
-//	        for (int i = 0; i < size; i++) {  
-////	            System.out.println("name:" + fileList[i].getPath().getName()  
-////	                    + "\t\tsize:" + fileList[i].getLen()); 
-//	            if(fileList[i].getLen() < ONE_NODE) {
-//	            	fileName = fileList[i].getPath().getName();
-//	            	break;
-//	            }
-//	        } 
-//	       
-//	        if(fileName == null || fileName == "") {
-//	  
-//	        	if(size != 0) {
-//	        		
-//		        	String lastName = fileList[size-1].getPath().getName();
-//		        	int idx = Integer.parseInt(lastName.substring(4)) + 1;
-//		        	fileName = "data" + idx;
-//	        	}else {
-//	        		
-//	        		fileName = "data" + 0;
-//	        	}
-//	        	createFile("/node" + kvpodId + "/" + fileName);
-//	        }
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		String filePath = "/node" + kvpodId + "/" + fileName;
-		
+
 		String dst = HDFS_PATH + "/data";
 		mkdir(dst);
 		int idx = 0;
